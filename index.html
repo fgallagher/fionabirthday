@@ -76,6 +76,137 @@
             max-width: 90vw;
         }
 
+        .password-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0a0a0a;
+            z-index: 5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 1;
+            transition: opacity 1s ease-in-out;
+        }
+
+        .password-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .password-container {
+            background: rgba(20, 20, 20, 0.95);
+            border: 2px solid #333;
+            border-radius: 15px;
+            padding: 2rem;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .password-title {
+            font-size: clamp(1.2rem, 5vw, 1.8rem);
+            color: #fff;
+            margin-bottom: 1rem;
+            font-weight: 300;
+        }
+
+        .password-subtitle {
+            font-size: clamp(0.9rem, 3vw, 1.1rem);
+            color: #ccc;
+            margin-bottom: 1.5rem;
+            line-height: 1.4;
+        }
+
+        .password-input {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: clamp(1rem, 4vw, 1.2rem);
+            background: #222;
+            border: 2px solid #444;
+            border-radius: 8px;
+            color: #fff;
+            margin-bottom: 1rem;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        .password-input:focus {
+            border-color: #666;
+        }
+
+        .password-input.error {
+            border-color: #ff4444;
+            animation: shake 0.5s ease-in-out;
+        }
+
+        .password-submit {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: clamp(1rem, 4vw, 1.1rem);
+            background: #333;
+            border: 2px solid #555;
+            border-radius: 8px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 1rem;
+        }
+
+        .password-submit:hover {
+            background: #444;
+            border-color: #666;
+        }
+
+        .password-submit:active {
+            transform: scale(0.98);
+        }
+
+        .password-submit:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .attempts-remaining {
+            font-size: clamp(0.8rem, 3vw, 1rem);
+            color: #ff6666;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .error-message {
+            font-size: clamp(0.8rem, 3vw, 1rem);
+            color: #ff4444;
+            margin-top: 0.5rem;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .error-message.show {
+            opacity: 1;
+        }
+
+        .final-message {
+            font-size: clamp(0.9rem, 3vw, 1.1rem);
+            color: #66ff66;
+            margin-top: 1rem;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        .final-message.show {
+            opacity: 1;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
         .content h1 {
             font-size: clamp(2rem, 8vw, 3.5rem);
             margin-bottom: 1rem;
@@ -246,6 +377,23 @@
         <div class="tap-indicator" id="tapIndicator">
             Tap to try again
         </div>
+        
+        <!-- Password Screen -->
+        <div class="password-screen" id="passwordScreen">
+            <div class="password-container">
+                <div class="password-title">SECURE ACCESS</div>
+                <div class="password-subtitle">Charlie has three chances to enter the correct password.</div>
+                <input type="password" 
+                       class="password-input" 
+                       id="passwordInput" 
+                       placeholder="Enter password..."
+                       maxlength="20">
+                <button class="password-submit" id="passwordSubmit">SUBMIT</button>
+                <div class="attempts-remaining" id="attemptsRemaining">Attempts remaining: 3</div>
+                <div class="error-message" id="errorMessage">Access denied. Try again.</div>
+                <div class="final-message" id="finalMessage">Security breach detected. Revealing classified image...</div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -254,7 +402,87 @@
             const content = document.getElementById('content');
             const replayBtn = document.getElementById('replayBtn');
             const tapIndicator = document.getElementById('tapIndicator');
+            const passwordScreen = document.getElementById('passwordScreen');
+            const passwordInput = document.getElementById('passwordInput');
+            const passwordSubmit = document.getElementById('passwordSubmit');
+            const attemptsRemaining = document.getElementById('attemptsRemaining');
+            const errorMessage = document.getElementById('errorMessage');
+            const finalMessage = document.getElementById('finalMessage');
+            const mainImage = document.getElementById('mainImage');
+            
             let animationInProgress = false;
+            let attempts = 3;
+            let passwordPhaseComplete = false;
+            let currentImageIndex = 1; // Start with image 1
+
+            // Password system
+            function handlePasswordSubmit() {
+                const password = passwordInput.value.trim();
+                
+                if (password === '') {
+                    showError('Please enter a password.');
+                    return;
+                }
+
+                attempts--;
+                
+                if (attempts > 0) {
+                    // Show error and update attempts
+                    showError('Access denied. Try again.');
+                    attemptsRemaining.textContent = `Attempts remaining: ${attempts}`;
+                    attemptsRemaining.style.color = attempts === 1 ? '#ff3333' : '#ff6666';
+                    
+                    // Clear input and add error animation
+                    passwordInput.value = '';
+                    passwordInput.classList.add('error');
+                    setTimeout(() => passwordInput.classList.remove('error'), 500);
+                    
+                } else {
+                    // Final attempt failed - reveal image
+                    showError('Access denied.');
+                    attemptsRemaining.textContent = 'No attempts remaining';
+                    attemptsRemaining.style.color = '#ff3333';
+                    passwordInput.disabled = true;
+                    passwordSubmit.disabled = true;
+                    
+                    // Switch to next image for this breach
+                    mainImage.src = `fionabirthday ${currentImageIndex}.jpeg`;
+                    
+                    // Show final message and start transition
+                    setTimeout(() => {
+                        finalMessage.classList.add('show');
+                        setTimeout(() => {
+                            passwordPhaseComplete = true;
+                            passwordScreen.classList.add('hidden');
+                            setTimeout(() => {
+                                startAnimation();
+                            }, 1000);
+                        }, 2000);
+                    }, 1000);
+                }
+            }
+
+            function showError(message) {
+                errorMessage.textContent = message;
+                errorMessage.classList.add('show');
+                setTimeout(() => {
+                    errorMessage.classList.remove('show');
+                }, 3000);
+            }
+
+            // Password event listeners
+            passwordSubmit.addEventListener('click', handlePasswordSubmit);
+            passwordInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handlePasswordSubmit();
+                }
+            });
+
+            // Focus on password input when page loads
+            setTimeout(() => {
+                passwordInput.focus();
+            }, 500);
 
             function startAnimation() {
                 if (animationInProgress) return;
@@ -284,38 +512,74 @@
                 }, 1000);
             }
 
-            // Start animation on load
-            startAnimation();
+            // Reset everything back to password screen
+            function resetToPasswordScreen() {
+                if (!animationInProgress) {
+                    // Alternate to next image for next breach
+                    currentImageIndex = currentImageIndex === 1 ? 2 : 1;
+                    
+                    // Reset password system state
+                    attempts = 3;
+                    passwordPhaseComplete = false;
+                    passwordInput.disabled = false;
+                    passwordSubmit.disabled = false;
+                    passwordInput.value = '';
+                    passwordInput.classList.remove('error');
+                    
+                    // Reset UI elements
+                    attemptsRemaining.textContent = 'Attempts remaining: 3';
+                    attemptsRemaining.style.color = '#ff6666';
+                    errorMessage.classList.remove('show');
+                    finalMessage.classList.remove('show');
+                    
+                    // Hide tap indicator and show password screen
+                    tapIndicator.classList.remove('show');
+                    passwordScreen.classList.remove('hidden');
+                    
+                    // Reset overlays
+                    blackOverlay.style.opacity = '1';
+                    content.style.opacity = '0';
+                    
+                    // Focus on password input
+                    setTimeout(() => {
+                        passwordInput.focus();
+                    }, 100);
+                }
+            }
 
-            // Replay button functionality (if enabled)
+            // Replay button functionality (if enabled) - now resets to password screen
             if (replayBtn) {
-                replayBtn.addEventListener('click', startAnimation);
+                replayBtn.addEventListener('click', resetToPasswordScreen);
                 replayBtn.addEventListener('touchstart', function(e) {
                     e.preventDefault();
-                    startAnimation();
+                    resetToPasswordScreen();
                 });
             }
 
-            // Touch/click anywhere to replay
+            // Touch/click anywhere to reset to password screen (only after password phase)
             document.addEventListener('click', function(e) {
-                if (!animationInProgress && e.target !== replayBtn) {
-                    startAnimation();
+                if (passwordPhaseComplete && !animationInProgress && 
+                    e.target !== replayBtn && 
+                    !passwordScreen.contains(e.target)) {
+                    resetToPasswordScreen();
                 }
             });
 
-            // Touch support for mobile
+            // Touch support for mobile (only after password phase)
             document.addEventListener('touchstart', function(e) {
-                if (!animationInProgress && e.target !== replayBtn) {
+                if (passwordPhaseComplete && !animationInProgress && 
+                    e.target !== replayBtn && 
+                    !passwordScreen.contains(e.target)) {
                     e.preventDefault();
-                    startAnimation();
+                    resetToPasswordScreen();
                 }
             }, { passive: false });
 
-            // Keyboard controls (space/enter)
+            // Keyboard controls (space/enter) - only after password phase
             document.addEventListener('keydown', function(e) {
-                if (!animationInProgress && (e.code === 'Space' || e.code === 'Enter')) {
+                if (passwordPhaseComplete && !animationInProgress && (e.code === 'Space' || e.code === 'Enter')) {
                     e.preventDefault();
-                    startAnimation();
+                    resetToPasswordScreen();
                 }
             });
 
