@@ -12,16 +12,25 @@
         }
 
         body {
-            font-family: Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             overflow: hidden;
             height: 100vh;
+            height: 100dvh; /* Dynamic viewport height for mobile */
             background: #000;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            touch-action: manipulation;
         }
 
         .container {
             position: relative;
             width: 100vw;
             height: 100vh;
+            height: 100dvh; /* Dynamic viewport height for mobile */
         }
 
         .black-overlay {
@@ -63,31 +72,112 @@
             opacity: 0;
             transition: opacity 2s ease-in-out;
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            padding: 1rem;
+            max-width: 90vw;
         }
 
         .content h1 {
-            font-size: 3rem;
+            font-size: clamp(2rem, 8vw, 3.5rem);
             margin-bottom: 1rem;
+            font-weight: 300;
+            line-height: 1.2;
         }
 
         .content p {
-            font-size: 1.2rem;
+            font-size: clamp(1rem, 4vw, 1.3rem);
             margin-bottom: 2rem;
+            line-height: 1.4;
+            opacity: 0.9;
         }
 
         .replay-btn {
             background: rgba(255, 255, 255, 0.2);
             border: 2px solid rgba(255, 255, 255, 0.5);
             color: white;
-            padding: 12px 30px;
-            font-size: 1rem;
+            padding: clamp(10px, 3vw, 15px) clamp(20px, 6vw, 35px);
+            font-size: clamp(0.9rem, 3.5vw, 1.1rem);
             cursor: pointer;
             border-radius: 30px;
             transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            font-weight: 300;
+            letter-spacing: 0.5px;
+            min-height: 44px; /* iOS touch target minimum */
+            min-width: 44px;
+            touch-action: manipulation;
         }
 
-        .replay-btn:hover {
+        .replay-btn:hover,
+        .replay-btn:focus {
             background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.8);
+            outline: none;
+        }
+
+        .replay-btn:active {
+            transform: scale(0.95);
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        /* Touch feedback */
+        .tap-indicator {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.6);
+            font-size: clamp(0.8rem, 3vw, 1rem);
+            text-align: center;
+            z-index: 4;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+            pointer-events: none;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+        }
+
+        .tap-indicator.show {
+            opacity: 1;
+        }
+
+        /* High DPI displays */
+        @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+            .content {
+                text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.9);
+            }
+        }
+
+        /* Landscape mobile orientation */
+        @media screen and (orientation: landscape) and (max-height: 500px) {
+            .content h1 {
+                font-size: clamp(1.5rem, 6vw, 2.5rem);
+                margin-bottom: 0.5rem;
+            }
+            
+            .content p {
+                font-size: clamp(0.9rem, 3vw, 1.1rem);
+                margin-bottom: 1rem;
+            }
+            
+            .replay-btn {
+                padding: clamp(8px, 2vw, 12px) clamp(16px, 4vw, 25px);
+            }
+        }
+
+        /* Very small screens */
+        @media screen and (max-width: 320px) {
+            .content {
+                padding: 0.5rem;
+            }
+        }
+
+        /* Reduce motion for accessibility */
+        @media (prefers-reduced-motion: reduce) {
+            .black-overlay,
+            .content,
+            .replay-btn {
+                transition: none;
+            }
         }
     </style>
 </head>
@@ -104,6 +194,9 @@
             <p>Experience the beauty of smooth transitions</p>
             <button class="replay-btn" id="replayBtn">Replay Animation</button> -->
         </div>
+        <div class="tap-indicator" id="tapIndicator">
+            Tap anywhere to replay
+        </div>
     </div>
 
     <script>
@@ -111,8 +204,16 @@
             const blackOverlay = document.getElementById('blackOverlay');
             const content = document.getElementById('content');
             const replayBtn = document.getElementById('replayBtn');
+            const tapIndicator = document.getElementById('tapIndicator');
+            let animationInProgress = false;
 
             function startAnimation() {
+                if (animationInProgress) return;
+                animationInProgress = true;
+                
+                // Hide tap indicator
+                tapIndicator.classList.remove('show');
+                
                 // Reset
                 blackOverlay.style.opacity = '1';
                 content.style.opacity = '0';
@@ -124,6 +225,12 @@
                     // Show content after overlay starts fading
                     setTimeout(() => {
                         content.style.opacity = '1';
+                        animationInProgress = false;
+                        
+                        // Show tap indicator after animation completes
+                        setTimeout(() => {
+                            tapIndicator.classList.add('show');
+                        }, 1000);
                     }, 1000);
                 }, 1000);
             }
@@ -131,8 +238,63 @@
             // Start animation on load
             startAnimation();
 
-            // Replay button
-            replayBtn.addEventListener('click', startAnimation);
+            // Replay button functionality (if enabled)
+            if (replayBtn) {
+                replayBtn.addEventListener('click', startAnimation);
+                replayBtn.addEventListener('touchstart', function(e) {
+                    e.preventDefault();
+                    startAnimation();
+                });
+            }
+
+            // Touch/click anywhere to replay
+            document.addEventListener('click', function(e) {
+                if (!animationInProgress && e.target !== replayBtn) {
+                    startAnimation();
+                }
+            });
+
+            // Touch support for mobile
+            document.addEventListener('touchstart', function(e) {
+                if (!animationInProgress && e.target !== replayBtn) {
+                    e.preventDefault();
+                    startAnimation();
+                }
+            }, { passive: false });
+
+            // Keyboard controls (space/enter)
+            document.addEventListener('keydown', function(e) {
+                if (!animationInProgress && (e.code === 'Space' || e.code === 'Enter')) {
+                    e.preventDefault();
+                    startAnimation();
+                }
+            });
+
+            // Prevent context menu on long press (mobile)
+            document.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+            });
+
+            // Prevent zoom on double tap (iOS)
+            let lastTouchEnd = 0;
+            document.addEventListener('touchend', function(e) {
+                const now = (new Date()).getTime();
+                if (now - lastTouchEnd <= 300) {
+                    e.preventDefault();
+                }
+                lastTouchEnd = now;
+            }, false);
+
+            // Handle orientation changes
+            window.addEventListener('orientationchange', function() {
+                setTimeout(() => {
+                    // Force a reflow after orientation change
+                    document.body.style.height = window.innerHeight + 'px';
+                    setTimeout(() => {
+                        document.body.style.height = '100vh';
+                    }, 100);
+                }, 100);
+            });
         });
     </script>
 </body>
