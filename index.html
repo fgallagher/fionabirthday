@@ -414,6 +414,8 @@
             let attempts = 3;
             let passwordPhaseComplete = false;
             let currentImageIndex = 1; // Start with image 1
+            let tapCount = 0;
+            let nextCycleAt = Math.floor(Math.random() * 3) + 5; // Random between 5-7 for image 1
 
             // Password system
             function handlePasswordSubmit() {
@@ -446,8 +448,7 @@
                     passwordSubmit.disabled = true;
                     
                     // Switch to next image for this breach
-                    //mainImage.src = `fionabirthday ${currentImageIndex}.jpeg`; // removed to just be the 1 image
-                    mainImage.src = `fionabirthday 1.jpeg`;
+                    mainImage.src = `fionabirthday ${currentImageIndex}.jpeg`;
 
                     // Show final message and start transition
                     setTimeout(() => {
@@ -548,21 +549,45 @@
                 }
             }
 
-            // Replay button functionality (if enabled) - now resets to password screen
+            // Just change the image on tap
+            function changeImage() {
+                if (!animationInProgress) {
+                    tapCount++;
+                    
+                    // Check if it's time to change image
+                    if (tapCount >= nextCycleAt) {
+                        tapCount = 0;
+                        // Alternate the image
+                        currentImageIndex = currentImageIndex === 1 ? 2 : 1;
+                        mainImage.src = `fionabirthday ${currentImageIndex}.jpeg`;
+                        
+                        // Set next cycle based on current image
+                        if (currentImageIndex === 1) {
+                            // Image 1 needs 5-7 taps to change
+                            nextCycleAt = Math.floor(Math.random() * 3) + 5;
+                        } else {
+                            // Image 2 needs only 1 tap to change
+                            nextCycleAt = 1;
+                        }
+                    }
+                }
+            }
+
+            // Replay button functionality (if enabled) - now just changes image
             if (replayBtn) {
-                replayBtn.addEventListener('click', resetToPasswordScreen);
+                replayBtn.addEventListener('click', changeImage);
                 replayBtn.addEventListener('touchstart', function(e) {
                     e.preventDefault();
-                    resetToPasswordScreen();
+                    changeImage();
                 });
             }
 
-            // Touch/click anywhere to reset to password screen (only after password phase)
+            // Touch/click anywhere to change image (only after password phase)
             document.addEventListener('click', function(e) {
                 if (passwordPhaseComplete && !animationInProgress && 
                     e.target !== replayBtn && 
                     !passwordScreen.contains(e.target)) {
-                    resetToPasswordScreen();
+                    changeImage();
                 }
             });
 
@@ -572,7 +597,7 @@
                     e.target !== replayBtn && 
                     !passwordScreen.contains(e.target)) {
                     e.preventDefault();
-                    resetToPasswordScreen();
+                    changeImage();
                 }
             }, { passive: false });
 
@@ -580,7 +605,7 @@
             document.addEventListener('keydown', function(e) {
                 if (passwordPhaseComplete && !animationInProgress && (e.code === 'Space' || e.code === 'Enter')) {
                     e.preventDefault();
-                    resetToPasswordScreen();
+                    changeImage();
                 }
             });
 
